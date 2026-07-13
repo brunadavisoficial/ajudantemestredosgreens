@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ajudante Mestre dos Greens</title>
+<style>
+  :root{
+    --bg:#0b1120; --card:#131c31; --card2:#1a2540; --line:#25304d;
+    --green:#22c55e; --green-d:#16a34a; --red:#ef4444; --amber:#f59e0b;
+    --blue:#3b82f6; --purple:#8b5cf6; --txt:#e5edff; --muted:#8ea0c4;
+    --shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:
+    radial-gradient(1200px 600px at 80% -10%,#16224a 0,transparent 60%),
+    radial-gradient(900px 500px at -10% 10%,#0f2e22 0,transparent 55%),var(--bg);
+    color:var(--txt);min-height:100vh;padding-bottom:60px}
+  header{padding:22px 20px 10px;text-align:center}
+  header h1{font-size:1.6rem;letter-spacing:.5px;display:flex;gap:10px;justify-content:center;align-items:center}
+  header .leaf{color:var(--green)}
+  header p{color:var(--muted);font-size:.85rem;margin-top:4px}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 16px}
+  .tabs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:18px 0}
+  .tab{background:var(--card);border:1px solid var(--line);color:var(--muted);
+    padding:10px 18px;border-radius:12px;cursor:pointer;font-size:.9rem;font-weight:600;transition:.2s}
+  .tab:hover{color:var(--txt)}
+  .tab.active{background:linear-gradient(135deg,var(--green-d),var(--green));color:#04140a;border-color:transparent}
+  .panel{display:none;animation:fade .25s}
+  .panel.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .grid{display:grid;gap:16px}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  @media(max-width:760px){.g3,.g2{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow)}
+  .card h3{font-size:.85rem;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:12px;font-weight:700}
+  .stat{font-size:2rem;font-weight:800}
+  .stat.sm{font-size:1.4rem}
+  .pos{color:var(--green)} .neg{color:var(--red)} .neu{color:var(--amber)}
+  label{display:block;font-size:.8rem;color:var(--muted);margin:10px 0 4px;font-weight:600}
+  input,select{width:100%;background:var(--card2);border:1px solid var(--line);color:var(--txt);
+    padding:11px 12px;border-radius:10px;font-size:.95rem;outline:none;transition:.15s}
+  input:focus,select:focus{border-color:var(--green)}
+  button.act{background:linear-gradient(135deg,var(--green-d),var(--green));color:#04140a;border:none;
+    padding:12px 16px;border-radius:10px;font-weight:800;cursor:pointer;font-size:.9rem;width:100%;margin-top:14px;transition:.15s}
+  button.act:hover{filter:brightness(1.08)}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--muted);
+    padding:9px 14px;border-radius:10px;cursor:pointer;font-weight:600;font-size:.82rem}
+  button.ghost:hover{color:var(--txt);border-color:var(--muted)}
+  table{width:100%;border-collapse:collapse;font-size:.88rem}
+  th,td{padding:10px 8px;text-align:left;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.5px}
+  td .del{color:var(--red);cursor:pointer;font-weight:700;background:none;border:none;font-size:1rem}
+  .bar-wrap{display:flex;flex-direction:column;gap:14px;margin-top:6px}
+  .bar-row .top{display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:5px}
+  .bar{height:14px;background:var(--card2);border-radius:8px;overflow:hidden}
+  .bar > span{display:block;height:100%;border-radius:8px;transition:width .6s}
+  .donut-wrap{display:flex;gap:24px;align-items:center;flex-wrap:wrap;justify-content:center}
+  .legend{display:flex;flex-direction:column;gap:10px}
+  .legend div{display:flex;align-items:center;gap:8px;font-size:.9rem}
+  .dot{width:12px;height:12px;border-radius:3px;display:inline-block}
+  .row-inline{display:flex;gap:10px;flex-wrap:wrap}
+  .row-inline > div{flex:1;min-width:130px}
+  .pill{display:inline-block;padding:3px 9px;border-radius:20px;font-size:.72rem;font-weight:700}
+  .pill.green{background:rgba(34,197,94,.15);color:var(--green)}
+  .pill.red{background:rgba(239,68,68,.15);color:var(--red)}
+  .pill.neu{background:rgba(245,158,11,.15);color:var(--amber)}
+  .muted{color:var(--muted);font-size:.82rem}
+  .scoreboard{display:flex;flex-direction:column;gap:8px;max-height:280px;overflow:auto}
+  .match{display:flex;justify-content:space-between;align-items:center;background:var(--card2);
+    padding:10px 12px;border-radius:10px;font-size:.88rem}
+  .match .sc{font-weight:800;font-size:1rem}
+  .cfg{background:var(--card2);border:1px dashed var(--line);border-radius:12px;padding:14px;margin-top:14px}
+  .big-result{font-size:2.4rem;font-weight:900;text-align:center;margin:10px 0}
+  .hint{font-size:.78rem;color:var(--muted);margin-top:6px;line-height:1.5}
+  .flex-between{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--green);
+    color:#04140a;padding:12px 22px;border-radius:12px;font-weight:700;opacity:0;pointer-events:none;transition:.3s;z-index:99}
+  .toast.show{opacity:1}
+  footer{text-align:center;color:var(--muted);font-size:.75rem;margin-top:30px}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="leaf">🍀</span> Ajudante Mestre dos Greens</h1>
+  <p>Seu painel de gestão de banca e estatísticas</p>
+</header>
+
+<div class="wrap">
+  <div class="tabs">
+    <div class="tab active" data-tab="dash">📊 Dashboard</div>
+    <div class="tab" data-tab="capital">💰 Gestão de Capital</div>
+    <div class="tab" data-tab="calc">🧮 Calculadora de Stake</div>
+  </div>
+
+  <!-- ===================== DASHBOARD ===================== -->
+  <section class="panel active" id="dash">
+    <div class="grid g3">
+      <div class="card">
+        <h3>Banca Atual</h3>
+        <div class="stat" id="d-banca">R$ 0,00</div>
+        <div class="muted" id="d-banca-var">—</div>
+      </div>
+      <div class="card">
+        <h3>Resultado do Mês</h3>
+        <div class="stat sm" id="d-mes">R$ 0,00</div>
+        <div class="muted" id="d-mes-roi">ROI —</div>
+      </div>
+      <div class="card">
+        <h3>Resultado de Hoje</h3>
+        <div class="stat sm" id="d-hoje">R$ 0,00</div>
+        <div class="muted" id="d-hoje-info">—</div>
+      </div>
+    </div>
+
+    <div class="grid g2" style="margin-top:16px">
+      <div class="card">
+        <h3>Distribuição de Resultados</h3>
+        <div class="donut-wrap">
+          <svg width="170" height="170" viewBox="0 0 42 42" id="donut"></svg>
+          <div class="legend" id="donut-legend"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="flex-between">
+          <h3 style="margin:0">Placar do Dia (bot)</h3>
+          <button class="ghost" onclick="fetchScores()">↻ Atualizar</button>
+        </div>
+        <div class="scoreboard" id="scoreboard" style="margin-top:12px">
+          <div class="muted">Configure a URL do bot abaixo para carregar os placares.</div>
+        </div>
+        <div class="cfg">
+          <label>URL da API do bot (JSON)</label>
+          <input id="botUrl" placeholder="https://seu-bot.com/api/placar">
+          <button class="ghost" style="margin-top:10px;width:100%" onclick="saveBotUrl()">Salvar URL e carregar</button>
+          <div class="hint">Espera-se um JSON com lista de jogos. Campos aceitos por jogo:
+            <b>casa</b>/<b>home</b>, <b>visitante</b>/<b>away</b>, <b>placar</b>/<b>score</b> (ou <b>golsCasa</b>/<b>golsVisitante</b>),
+            <b>status</b>. Também aceito distribuição em <b>dist</b>: {casa, visitante, empate}.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== CAPITAL ===================== -->
+  <section class="panel" id="capital">
+    <div class="grid g3">
+      <div class="card">
+        <h3>Banca Inicial</h3>
+        <div class="row-inline">
+          <div>
+            <input id="bancaInicial" type="number" step="0.01" placeholder="Ex: 1000">
+          </div>
+        </div>
+        <button class="act" onclick="saveBancaInicial()">Definir banca inicial</button>
+        <div class="muted" style="margin-top:8px" id="cap-inicial-info">—</div>
+      </div>
+      <div class="card">
+        <h3>Banca Atual</h3>
+        <div class="stat sm" id="cap-atual">R$ 0,00</div>
+        <div class="muted" id="cap-atual-var">—</div>
+      </div>
+      <div class="card">
+        <h3>Lucro / Prejuízo Total</h3>
+        <div class="stat sm" id="cap-total">R$ 0,00</div>
+        <div class="muted" id="cap-total-roi">ROI —</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>Registrar Movimento do Dia</h3>
+      <div class="row-inline">
+        <div>
+          <label>Data</label>
+          <input id="mvData" type="date">
+        </div>
+        <div>
+          <label>Resultado (R$)</label>
+          <input id="mvValor" type="number" step="0.01" placeholder="Lucro + / Prejuízo -">
+        </div>
+        <div>
+          <label>Total apostado (R$) <span class="muted">opcional</span></label>
+          <input id="mvStake" type="number" step="0.01" placeholder="Ex: 200">
+        </div>
+        <div>
+          <label>Nota <span class="muted">opcional</span></label>
+          <input id="mvNota" placeholder="Ex: 3 greens, 1 red">
+        </div>
+      </div>
+      <button class="act" onclick="addMovimento()">＋ Adicionar ao histórico</button>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="flex-between">
+        <h3 style="margin:0">Histórico</h3>
+        <div class="row-inline" style="flex:0">
+          <button class="ghost" onclick="exportCSV()">Exportar CSV</button>
+          <button class="ghost" onclick="clearHist()">Limpar</button>
+        </div>
+      </div>
+      <div style="overflow:auto;margin-top:12px">
+        <table>
+          <thead><tr><th>Data</th><th>Resultado</th><th>Apostado</th><th>ROI dia</th><th>Nota</th><th></th></tr></thead>
+          <tbody id="histBody"><tr><td colspan="6" class="muted">Nenhum movimento ainda.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>Resumo por Mês</h3>
+      <div style="overflow:auto">
+        <table>
+          <thead><tr><th>Mês</th><th>Resultado</th><th>Dias +</th><th>Dias -</th><th>Melhor dia</th><th>Pior dia</th></tr></thead>
+          <tbody id="mesBody"><tr><td colspan="6" class="muted">—</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== CALCULADORA ===================== -->
+  <section class="panel" id="calc">
+    <div class="grid g2">
+      <div class="card">
+        <h3>Quantos greens para lucrar X?</h3>
+        <label>Valor da stake por entrada (R$)</label>
+        <input id="cStake" type="number" step="0.01" placeholder="Ex: 50" value="50">
+        <label>Odd média das entradas</label>
+        <input id="cOdd" type="number" step="0.01" placeholder="Ex: 1.80" value="1.80">
+        <label>Lucro desejado (R$)</label>
+        <input id="cLucro" type="number" step="0.01" placeholder="Ex: 500" value="500">
+        <button class="act" onclick="calcGreens()">Calcular</button>
+        <div class="big-result pos" id="cResult">—</div>
+        <div class="hint" id="cResultDetail"></div>
+      </div>
+      <div class="card">
+        <h3>Simulador de sequência</h3>
+        <label>Banca / valor inicial (R$)</label>
+        <input id="sBanca" type="number" step="0.01" placeholder="Ex: 1000" value="1000">
+        <label>Odd média</label>
+        <input id="sOdd" type="number" step="0.01" placeholder="Ex: 1.80" value="1.80">
+        <div class="row-inline">
+          <div>
+            <label>Nº de greens</label>
+            <input id="sGreens" type="number" placeholder="Ex: 10" value="10">
+          </div>
+          <div>
+            <label>Nº de reds</label>
+            <input id="sReds" type="number" placeholder="Ex: 3" value="3">
+          </div>
+        </div>
+        <label>% da banca por entrada (stake fixo %)</label>
+        <input id="sPerc" type="number" step="0.1" placeholder="Ex: 5" value="5">
+        <button class="act" onclick="simSeq()">Simular</button>
+        <div class="big-result" id="sResult">—</div>
+        <div class="hint" id="sResultDetail"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast"></div>
+<footer>🍀 Ajudante Mestre dos Greens — dados salvos localmente no seu navegador. Jogue com responsabilidade.</footer>
+
+<script>
+const BRL = v => (v<0?'-':'') + 'R$ ' + Math.abs(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const $ = id => document.getElementById(id);
+const store = {
+  get:(k,d)=>{try{const v=localStorage.getItem('amg_'+k);return v?JSON.parse(v):d;}catch(e){return d;}},
+  set:(k,v)=>localStorage.setItem('amg_'+k,JSON.stringify(v))
+};
+function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800);}
+
+/* ---------- Tabs ---------- */
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');$(t.dataset.tab).classList.add('active');
+});
+
+/* ---------- State ---------- */
+let bancaInicial = store.get('bancaInicial',0);
+let movimentos = store.get('movimentos',[]); // {data, valor, stake, nota}
+let botDist = store.get('botDist',{casa:42,visitante:38,empate:20});
+
+/* ---------- Capital ---------- */
+function bancaAtual(){return bancaInicial + movimentos.reduce((s,m)=>s+(+m.valor||0),0);}
+function totalPL(){return movimentos.reduce((s,m)=>s+(+m.valor||0),0);}
+function todayStr(){return new Date().toISOString().slice(0,10);}
+
+function saveBancaInicial(){
+  const v = parseFloat($('bancaInicial').value);
+  if(isNaN(v)||v<0){toast('Informe um valor válido');return;}
+  bancaInicial=v;store.set('bancaInicial',v);renderAll();toast('Banca inicial definida ✔');
+}
+function addMovimento(){
+  const data=$('mvData').value||todayStr();
+  const valor=parseFloat($('mvValor').value);
+  if(isNaN(valor)){toast('Informe o resultado do dia');return;}
+  const stake=parseFloat($('mvStake').value)||0;
+  const nota=$('mvNota').value.trim();
+  movimentos.push({data,valor,stake,nota});
+  movimentos.sort((a,b)=>a.data<b.data?-1:1);
+  store.set('movimentos',movimentos);
+  $('mvValor').value='';$('mvStake').value='';$('mvNota').value='';
+  renderAll();toast('Movimento adicionado ✔');
+}
+function delMov(i){movimentos.splice(i,1);store.set('movimentos',movimentos);renderAll();}
+function clearHist(){if(confirm('Apagar todo o histórico?')){movimentos=[];store.set('movimentos',[]);renderAll();}}
+function exportCSV(){
+  let csv='Data;Resultado;Apostado;Nota\n';
+  movimentos.forEach(m=>csv+=`${m.data};${(+m.valor).toFixed(2)};${(+m.stake).toFixed(2)};${(m.nota||'').replace(/;/g,',')}\n`);
+  const blob=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='greens_historico.csv';a.click();
+}
+
+function renderCapital(){
+  const atual=bancaAtual(), total=totalPL();
+  const roi=bancaInicial>0?(total/bancaInicial*100):0;
+  $('cap-atual').textContent=BRL(atual);
+  $('cap-atual').className='stat sm '+(atual>=bancaInicial?'pos':'neg');
+  $('cap-atual-var').textContent=(total>=0?'▲ ':'▼ ')+BRL(total)+' vs inicial';
+  $('cap-total').textContent=BRL(total);
+  $('cap-total').className='stat sm '+(total>=0?'pos':'neg');
+  $('cap-total-roi').textContent='ROI '+(roi>=0?'+':'')+roi.toFixed(1)+'%';
+  $('cap-inicial-info').textContent = bancaInicial>0?('Definida: '+BRL(bancaInicial)):'Ainda não definida';
+  if(bancaInicial>0 && !$('bancaInicial').value) $('bancaInicial').value=bancaInicial;
+
+  // histórico
+  const tb=$('histBody');
+  if(!movimentos.length){tb.innerHTML='<tr><td colspan="6" class="muted">Nenhum movimento ainda.</td></tr>';}
+  else{
+    tb.innerHTML=movimentos.map((m,i)=>{
+      const roiDia=m.stake>0?((m.valor/m.stake*100).toFixed(0)+'%'):'—';
+      const cls=m.valor>0?'pos':m.valor<0?'neg':'neu';
+      const d=m.data.split('-').reverse().join('/');
+      return `<tr><td>${d}</td><td class="${cls}">${BRL(m.valor)}</td>
+        <td>${m.stake>0?BRL(m.stake):'—'}</td><td class="${cls}">${roiDia}</td>
+        <td class="muted">${m.nota||''}</td>
+        <td><button class="del" onclick="delMov(${i})">✕</button></td></tr>`;
+    }).join('');
+  }
+  renderMeses();
+}
+function renderMeses(){
+  const map={};
+  movimentos.forEach(m=>{
+    const mk=m.data.slice(0,7);
+    if(!map[mk])map[mk]={res:0,pos:0,neg:0,best:-1e9,worst:1e9};
+    const o=map[mk];o.res+=+m.valor;
+    if(m.valor>0)o.pos++;else if(m.valor<0)o.neg++;
+    o.best=Math.max(o.best,+m.valor);o.worst=Math.min(o.worst,+m.valor);
+  });
+  const keys=Object.keys(map).sort().reverse();
+  const tb=$('mesBody');
+  if(!keys.length){tb.innerHTML='<tr><td colspan="6" class="muted">—</td></tr>';return;}
+  const nomes=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  tb.innerHTML=keys.map(k=>{
+    const o=map[k];const[y,mo]=k.split('-');
+    const cls=o.res>=0?'pos':'neg';
+    return `<tr><td>${nomes[+mo-1]}/${y}</td><td class="${cls}">${BRL(o.res)}</td>
+      <td class="pos">${o.pos}</td><td class="neg">${o.neg}</td>
+      <td class="pos">${BRL(o.best)}</td><td class="neg">${BRL(o.worst)}</td></tr>`;
+  }).join('');
+}
+
+/* ---------- Dashboard ---------- */
+function renderDash(){
+  const atual=bancaAtual(),total=totalPL();
+  $('d-banca').textContent=BRL(atual);
+  $('d-banca').className='stat '+(atual>=bancaInicial?'pos':'neg');
+  const roi=bancaInicial>0?(total/bancaInicial*100):0;
+  $('d-banca-var').textContent=bancaInicial>0?((total>=0?'▲ ':'▼ ')+(roi>=0?'+':'')+roi.toFixed(1)+'% sobre a inicial'):'Defina a banca inicial';
+
+  const mk=todayStr().slice(0,7);
+  const mesRes=movimentos.filter(m=>m.data.slice(0,7)===mk).reduce((s,m)=>s+ +m.valor,0);
+  const mesStake=movimentos.filter(m=>m.data.slice(0,7)===mk).reduce((s,m)=>s+ +(m.stake||0),0);
+  $('d-mes').textContent=BRL(mesRes);$('d-mes').className='stat sm '+(mesRes>=0?'pos':'neg');
+  $('d-mes-roi').textContent=mesStake>0?('ROI '+(mesRes/mesStake*100).toFixed(1)+'% sobre apostado'):'ROI —';
+
+  const hojeMovs=movimentos.filter(m=>m.data===todayStr());
+  const hojeRes=hojeMovs.reduce((s,m)=>s+ +m.valor,0);
+  $('d-hoje').textContent=BRL(hojeRes);$('d-hoje').className='stat sm '+(hojeRes>=0?'pos':hojeRes<0?'neg':'neu');
+  $('d-hoje-info').textContent=hojeMovs.length?(hojeMovs.length+' registro(s) hoje'):'Sem registros hoje';
+
+  renderDonut();
+}
+function renderDonut(){
+  const d=botDist;const total=(d.casa+d.visitante+d.empate)||1;
+  const parts=[{k:'Casa',v:d.casa,c:'#22c55e'},{k:'Visitante',v:d.visitante,c:'#3b82f6'},{k:'Empate',v:d.empate,c:'#f59e0b'}];
+  let off=0;const svg=$('donut');svg.innerHTML='<circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#1a2540" stroke-width="6"/>';
+  parts.forEach(p=>{
+    const pct=p.v/total*100;
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',21);c.setAttribute('cy',21);c.setAttribute('r',15.915);
+    c.setAttribute('fill','transparent');c.setAttribute('stroke',p.c);c.setAttribute('stroke-width',6);
+    c.setAttribute('stroke-dasharray',`${pct} ${100-pct}`);
+    c.setAttribute('stroke-dashoffset',25-off);off+=pct;
+    svg.appendChild(c);
+  });
+  $('donut-legend').innerHTML=parts.map(p=>
+    `<div><span class="dot" style="background:${p.c}"></span> ${p.k} <b style="margin-left:auto">${(p.v/total*100).toFixed(0)}%</b></div>`).join('');
+}
+
+/* ---------- Bot scores ---------- */
+function saveBotUrl(){const u=$('botUrl').value.trim();store.set('botUrl',u);toast('URL salva');fetchScores();}
+async function fetchScores(){
+  const url=store.get('botUrl','');const box=$('scoreboard');
+  if(!url){box.innerHTML='<div class="muted">Configure a URL do bot abaixo para carregar os placares.</div>';return;}
+  box.innerHTML='<div class="muted">Carregando...</div>';
+  try{
+    const r=await fetch(url);const data=await r.json();
+    // distribuição
+    if(data.dist){botDist={casa:+data.dist.casa||0,visitante:+data.dist.visitante||0,empate:+data.dist.empate||0};
+      store.set('botDist',botDist);renderDonut();}
+    // jogos
+    let jogos=Array.isArray(data)?data:(data.jogos||data.matches||data.games||[]);
+    if(!jogos.length){box.innerHTML='<div class="muted">Nenhum jogo retornado. Distribuição atualizada se enviada.</div>';return;}
+    box.innerHTML=jogos.map(j=>{
+      const casa=j.casa||j.home||j.timeCasa||'Casa';
+      const vis=j.visitante||j.away||j.timeVisitante||'Visitante';
+      let sc=j.placar||j.score;
+      if(sc==null && (j.golsCasa!=null||j.golsVisitante!=null)) sc=`${j.golsCasa??0} - ${j.golsVisitante??0}`;
+      const st=j.status||'';
+      return `<div class="match"><span>${casa}</span><span class="sc">${sc??'-'}</span>
+        <span>${vis}</span>${st?`<span class="pill neu">${st}</span>`:''}</div>`;
+    }).join('');
+    toast('Placares atualizados ✔');
+  }catch(e){
+    box.innerHTML=`<div class="muted">Erro ao carregar (${e.message}). Verifique a URL e o CORS do servidor do bot.</div>`;
+  }
+}
+
+/* ---------- Calculadora ---------- */
+function calcGreens(){
+  const stake=parseFloat($('cStake').value),odd=parseFloat($('cOdd').value),lucro=parseFloat($('cLucro').value);
+  if([stake,odd,lucro].some(isNaN)||stake<=0||odd<=1||lucro<=0){$('cResult').textContent='—';$('cResultDetail').textContent='Preencha stake, odd (>1) e lucro.';return;}
+  const lucroPorGreen=stake*(odd-1);
+  const n=Math.ceil(lucro/lucroPorGreen);
+  $('cResult').textContent=n+(n===1?' green':' greens');
+  $('cResult').className='big-result pos';
+  $('cResultDetail').innerHTML=`Cada green rende <b>${BRL(lucroPorGreen)}</b> (stake ${BRL(stake)} × odd ${odd.toFixed(2)}).<br>
+    ${n} greens rendem <b>${BRL(n*lucroPorGreen)}</b> — atinge a meta de ${BRL(lucro)}.<br>
+    <span class="muted">Total movimentado em ${n} entradas: ${BRL(n*stake)}.</span>`;
+}
+function simSeq(){
+  let banca=parseFloat($('sBanca').value);const odd=parseFloat($('sOdd').value);
+  const g=parseInt($('sGreens').value),r=parseInt($('sReds').value),perc=parseFloat($('sPerc').value);
+  if([banca,odd,g,r,perc].some(isNaN)||banca<=0||odd<=1){$('sResult').textContent='—';$('sResultDetail').textContent='Preencha os campos corretamente.';return;}
+  const inicial=banca;let entradas=[];
+  // intercala greens e reds proporcionalmente
+  const seq=[];for(let i=0;i<g;i++)seq.push('g');for(let i=0;i<r;i++)seq.push('r');
+  seq.sort(()=>0); // mantém greens depois reds; ordem não afeta stake fixo % muito, mas simulamos sequencial
+  for(const s of seq){
+    const stake=banca*perc/100;
+    banca += s==='g'? stake*(odd-1) : -stake;
+  }
+  const pl=banca-inicial;
+  $('sResult').textContent=BRL(banca);
+  $('sResult').className='big-result '+(pl>=0?'pos':'neg');
+  const total=g+r;const acerto=total>0?(g/total*100).toFixed(0):0;
+  $('sResultDetail').innerHTML=`Resultado: <b class="${pl>=0?'pos':'neg'}">${(pl>=0?'+':'')+BRL(pl)}</b>
+    (${pl>=0?'+':''}${(pl/inicial*100).toFixed(1)}% da banca).<br>
+    ${g} greens e ${r} reds • aproveitamento ${acerto}% • stake ${perc}% da banca por entrada.`;
+}
+
+/* ---------- Init ---------- */
+function renderAll(){renderCapital();renderDash();}
+$('mvData').value=todayStr();
+$('botUrl').value=store.get('botUrl','');
+renderAll();fetchScores();
+</script>
+</body>
+</html>

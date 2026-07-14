@@ -129,6 +129,26 @@
 
   <!-- ===================== DASHBOARD ===================== -->
   <section class="panel active" id="dash">
+    <div class="card" id="botBanner" style="margin-bottom:16px;background:linear-gradient(180deg,#141d38,#0c1428)">
+      <div class="flex-between">
+        <span class="badge" id="botLive" style="border-color:#233257">● conectando ao bot…</span>
+        <div class="row-inline" style="flex:0">
+          <span class="muted" id="botUpdated"></span>
+          <button class="ghost" onclick="syncBot(true)">↻ Sincronizar</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;margin-top:12px;flex-wrap:wrap">
+        <div>
+          <div class="muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.5px">Entrada do bot</div>
+          <div id="botEntrada" style="font-size:1.8rem;font-weight:900;line-height:1.1">—</div>
+        </div>
+        <div style="margin-left:auto;text-align:right">
+          <div class="muted" style="font-size:.72rem">Sequência de greens</div>
+          <div id="botSeq" style="font-size:1.4rem;font-weight:800" class="pos">0</div>
+        </div>
+      </div>
+      <div class="muted" id="botEntradaSub" style="margin-top:6px"></div>
+    </div>
     <div class="grid g3">
       <div class="card">
         <h3>Banca Atual</h3>
@@ -159,11 +179,10 @@
       <div class="card">
         <div class="flex-between">
           <h3 style="margin:0">Placar do Dia (bot)</h3>
-          <button class="ghost" onclick="fetchScores()">↻ Atualizar</button>
+          <span class="muted" id="placarDia" style="font-size:.82rem">—</span>
         </div>
-        <div class="scoreboard" id="scoreboard" style="margin-top:12px">
-          <div class="muted">Configure a URL do bot em ⚙️ para carregar os placares.</div>
-        </div>
+        <div class="occ" id="botPlacar" style="margin-top:12px"></div>
+        <div class="hint" id="botPlacarInfo">Sincroniza automaticamente com o bot pelo Supabase.</div>
       </div>
     </div>
   </section>
@@ -276,8 +295,11 @@
       <div class="hint">GREEN = seu lado vem (lado paga, empate perde). EMPATE = sai empate (empate paga, lado perde).
         Os valores já descontam as perdas dos gales anteriores. Ajuste as odds conforme a sua casa.</div>
 
-      <h3 style="margin-top:20px">Quantidades da sessão</h3>
-      <div class="sim-grid">
+      <div class="flex-between" style="margin-top:20px">
+        <h3 style="margin:0">Quantidades da sessão</h3>
+        <button class="ghost" onclick="puxarDoBot()">⬇ Puxar do bot (hoje)</button>
+      </div>
+      <div class="sim-grid" style="margin-top:12px">
         <div><label>Greens sem gale</label><input id="qG0" type="number" min="0" value="4" oninput="calcSessao()"></div>
         <div><label>Greens gale 1</label><input id="qG1" type="number" min="0" value="2" oninput="calcSessao()"></div>
         <div><label>Greens gale 2</label><input id="qG2" type="number" min="0" value="0" oninput="calcSessao()"></div>
@@ -314,13 +336,21 @@
   <!-- ===================== CONFIG ===================== -->
   <section class="panel" id="config">
     <div class="card">
-      <h3>Configurações</h3>
-      <label>URL da API do bot (JSON)</label>
-      <input id="botUrl" placeholder="https://seu-bot.com/api/placar">
-      <button class="ghost" style="margin-top:10px;width:100%" onclick="saveBotUrl()">Salvar URL e carregar placares</button>
-      <div class="hint">Aceita jogos com campos <b>casa</b>/<b>home</b>, <b>visitante</b>/<b>away</b>,
-        <b>placar</b>/<b>score</b> (ou <b>golsCasa</b>/<b>golsVisitante</b>), <b>status</b>.
-        E distribuição em <b>dist</b>: {casa, visitante, empate}. O servidor precisa liberar CORS.</div>
+      <h3>Conexão com o bot (Supabase)</h3>
+      <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0">
+        <input type="checkbox" id="syncOn" style="width:auto" onchange="saveSupa()"> Sincronizar automaticamente com o bot
+      </label>
+      <label>Supabase URL</label>
+      <input id="supaUrl" placeholder="https://xxxx.supabase.co">
+      <label>Chave pública (anon)</label>
+      <input id="supaKey" placeholder="eyJ...">
+      <label>Bridge ID</label>
+      <input id="supaBid" placeholder="ID da ponte">
+      <label>Intervalo de atualização (segundos)</label>
+      <input id="supaInt" type="number" min="2" value="5">
+      <button class="ghost" style="margin-top:10px;width:100%" onclick="saveSupa()">Salvar e sincronizar</button>
+      <div class="hint">Esses dados vêm do <b>fs_config.js</b> da sua extensão (SUPA_URL, a chave e o BRIDGE_ID).
+        O app só <b>lê</b> o estado do bot — nunca grava. A chave <i>anon</i> é pública por natureza.</div>
 
       <h3 style="margin-top:22px">Distribuição manual (%)</h3>
       <div class="row-inline">
@@ -528,35 +558,118 @@ function renderDonut(){
     `<div><span class="dot" style="background:${p.c}"></span> ${p.k} <b style="margin-left:auto">${(p.v/total*100).toFixed(0)}%</b></div>`).join('');
 }
 
-/* ===================== BOT SCORES ===================== */
-function saveBotUrl(){const u=$('botUrl').value.trim();store.set('botUrl',u);toast('URL salva');fetchScores();}
 function saveDist(){
   botDist={casa:parseFloat($('dCasa').value)||0,visitante:parseFloat($('dVis').value)||0,empate:parseFloat($('dEmp').value)||0};
   store.set('botDist',botDist);renderDonut();toast('Distribuição salva ✔');
 }
-async function fetchScores(){
-  const url=store.get('botUrl','');const box=$('scoreboard');
-  if(!url){box.innerHTML='<div class="muted">Configure a URL do bot em ⚙️ para carregar os placares.</div>';return;}
-  box.innerHTML='<div class="muted">Carregando...</div>';
-  try{
-    const r=await fetch(url);const data=await r.json();
-    if(data.dist){botDist={casa:+data.dist.casa||0,visitante:+data.dist.visitante||0,empate:+data.dist.empate||0};
-      store.set('botDist',botDist);renderDonut();}
-    let jogos=Array.isArray(data)?data:(data.jogos||data.matches||data.games||[]);
-    if(!jogos.length){box.innerHTML='<div class="muted">Nenhum jogo retornado.</div>';return;}
-    box.innerHTML=jogos.map(j=>{
-      const casa=j.casa||j.home||j.timeCasa||'Casa';
-      const vis=j.visitante||j.away||j.timeVisitante||'Visitante';
-      let sc=j.placar||j.score;
-      if(sc==null && (j.golsCasa!=null||j.golsVisitante!=null)) sc=`${j.golsCasa??0} - ${j.golsVisitante??0}`;
-      const st=j.status||'';
-      return `<div class="match"><span>${casa}</span><span class="sc">${sc??'-'}</span>
-        <span>${vis}</span>${st?`<span class="pill neu">${st}</span>`:''}</div>`;
-    }).join('');
-    toast('Placares atualizados ✔');
-  }catch(e){
-    box.innerHTML=`<div class="muted">Erro ao carregar (${e.message}). Verifique a URL e o CORS do bot.</div>`;
+
+/* ===================== SINCRONIZAÇÃO COM O BOT (Supabase) ===================== */
+const SUPA_DEFAULT={
+  url:'https://kejzksncznuaecaailia.supabase.co',
+  key:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtlanprc25jem51YWVjYWFpbGlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MDQ4MjQsImV4cCI6MjA5ODA4MDgyNH0.9aeULNThzaVA_rh0UQJxbo_3_aKpyZrhVZvf_PwE8XI',
+  bid:'54c3a799-8002-4700-b08c-f911719852bd'
+};
+const FS_NOME={C:'CASA',V:'VISITANTE',E:'EMPATE'};
+let supaCfg={}, supaTimer=null, lastBot=null;
+function loadSupa(){
+  supaCfg={
+    url:store.get('supaUrl',SUPA_DEFAULT.url),
+    key:store.get('supaKey',SUPA_DEFAULT.key),
+    bid:store.get('supaBid',SUPA_DEFAULT.bid),
+    intervalo:store.get('supaInt',5),
+    on:store.get('syncOn',true)
+  };
+}
+function fillSupaFields(){
+  $('supaUrl').value=supaCfg.url; $('supaKey').value=supaCfg.key;
+  $('supaBid').value=supaCfg.bid; $('supaInt').value=supaCfg.intervalo; $('syncOn').checked=supaCfg.on;
+}
+function saveSupa(){
+  supaCfg.url=$('supaUrl').value.trim(); supaCfg.key=$('supaKey').value.trim();
+  supaCfg.bid=$('supaBid').value.trim(); supaCfg.intervalo=Math.max(2,parseInt($('supaInt').value)||5);
+  supaCfg.on=$('syncOn').checked;
+  store.set('supaUrl',supaCfg.url);store.set('supaKey',supaCfg.key);store.set('supaBid',supaCfg.bid);
+  store.set('supaInt',supaCfg.intervalo);store.set('syncOn',supaCfg.on);
+  toast('Configuração salva ✔');
+  startSync();
+}
+function startSync(){
+  if(supaTimer){clearInterval(supaTimer);supaTimer=null;}
+  if(supaCfg.on && supaCfg.url && supaCfg.key && supaCfg.bid){
+    syncBot(false);
+    supaTimer=setInterval(()=>syncBot(false), supaCfg.intervalo*1000);
+  }else{
+    setLive('off','⏸ sincronização desligada');
   }
+}
+function setLive(state,txt){
+  const el=$('botLive');if(!el)return;
+  const cor=state==='ok'?'var(--green)':state==='err'?'var(--red)':'var(--muted)';
+  el.style.color=cor;el.style.borderColor=state==='ok'?'#16a34a55':'#233257';
+  el.textContent=txt;
+}
+async function syncBot(manual){
+  if(!supaCfg.url||!supaCfg.key||!supaCfg.bid){if(manual)toast('Preencha a conexão em ⚙️');return;}
+  if(manual)setLive('','● sincronizando…');
+  try{
+    const base=supaCfg.url.replace(/\/+$/,'');
+    const url=base+'/rest/v1/estado?id=eq.'+encodeURIComponent(supaCfg.bid)+'&select=updated_at,payload';
+    const r=await fetch(url,{headers:{apikey:supaCfg.key,Authorization:'Bearer '+supaCfg.key}});
+    if(!r.ok){setLive('err','● erro '+r.status);return;}
+    const rows=await r.json();
+    if(!rows||!rows.length){setLive('err','● nenhum dado do bot ainda');return;}
+    lastBot={payload:rows[0].payload,updated_at:rows[0].updated_at};
+    applyBot();
+    if(manual)toast('Sincronizado com o bot ✔');
+  }catch(e){setLive('err','● sem conexão');}
+}
+function tempoDesde(iso){
+  if(!iso)return'';
+  const s=Math.max(0,Math.round((Date.now()-new Date(iso).getTime())/1000));
+  if(s<60)return'há '+s+'s'; if(s<3600)return'há '+Math.round(s/60)+'min'; return'há '+Math.round(s/3600)+'h';
+}
+function applyBot(){
+  if(!lastBot)return;
+  const p=lastBot.payload||{};
+  setLive('ok','● conectado ao bot');
+  $('botUpdated').textContent='atualizado '+tempoDesde(lastBot.updated_at);
+  // entrada atual
+  const ab=p.aberta;
+  if(ab&&ab.previsao){
+    $('botEntrada').textContent=FS_NOME[ab.previsao]||ab.previsao;
+    $('botEntrada').className='';
+    const cor=ab.previsao==='C'?'var(--green)':ab.previsao==='V'?'var(--blue)':'var(--amber)';
+    $('botEntrada').style.color=cor;
+    $('botEntradaSub').textContent = ab.tentativas>0 ? ('gale '+ab.tentativas+' em andamento') : 'entrada (sem gale)';
+  }else{
+    $('botEntrada').textContent='—';$('botEntrada').style.color='';
+    $('botEntradaSub').textContent='nenhuma entrada aberta agora';
+  }
+  $('botSeq').textContent=p.seqAtual||0;
+  // placar do dia
+  const d=p.daily||{};const pg=d.porGale||[0,0,0];const en=d.empatesPorNivel||[0,0,0];
+  $('placarDia').textContent=d.date||'';
+  $('botPlacar').innerHTML=`
+    <div class="box"><div class="k">✅ Greens</div><div class="v pos">${d.greens||0}</div></div>
+    <div class="box"><div class="k">🟠 Empates</div><div class="v neu">${d.empates||0}</div></div>
+    <div class="box"><div class="k">❌ Reds</div><div class="v neg">${d.reds||0}</div></div>
+    <div class="box"><div class="k">Banca (bot)</div><div class="v">${(p.banca!=null?BRL(p.banca):'—')}</div></div>`;
+  $('botPlacarInfo').innerHTML=`🎯 Greens por gale — SG <b>${pg[0]||0}</b> / G1 <b>${pg[1]||0}</b> / G2 <b>${pg[2]||0}</b>
+    · 🟠 Empates — entrada <b>${en[0]||0}</b> / G1 <b>${en[1]||0}</b> / G2 <b>${en[2]||0}</b>`;
+  // se o usuário deixou o modo automático, atualiza a calculadora também
+  if(store.get('calcAuto',false)) preencherCalc(d);
+}
+function preencherCalc(d){
+  if(!d)return;const pg=d.porGale||[0,0,0];const en=d.empatesPorNivel||[0,0,0];
+  $('qG0').value=pg[0]||0;$('qG1').value=pg[1]||0;$('qG2').value=pg[2]||0;
+  $('qR').value=d.reds||0;$('qE0').value=en[0]||0;$('qE1').value=en[1]||0;$('qE2').value=en[2]||0;
+  calcSessao();
+}
+function puxarDoBot(){
+  if(!lastBot){toast('Sincronize com o bot primeiro (⚙️)');syncBot(true);return;}
+  preencherCalc(lastBot.payload.daily);
+  store.set('calcAuto',true);
+  toast('Quantidades do bot carregadas ✔');
 }
 
 /* ===================== CALCULADORA (Sessão) ===================== */
@@ -632,11 +745,10 @@ function calcMeta(){
 /* ===================== INIT ===================== */
 function renderAll(){renderCapital();renderDash();}
 function initApp(){
-  loadState();bindTabs();
+  loadState();bindTabs();loadSupa();fillSupaFields();
   $('mvData').value=todayStr();
-  $('botUrl').value=store.get('botUrl','');
   $('dCasa').value=botDist.casa;$('dVis').value=botDist.visitante;$('dEmp').value=botDist.empate;
-  renderAll();calcSessao();fetchScores();
+  renderAll();calcSessao();startSync();
 }
 renderGate();
 </script>
